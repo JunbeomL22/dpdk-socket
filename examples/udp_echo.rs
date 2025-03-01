@@ -10,6 +10,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         port_id: 0,
         num_rx_queues: 1,
         num_tx_queues: 1,
+        bind_pci_device: false, // Set to true if you want to bind to a specific PCI device
+        pci_addr: "0000:00:08.0".to_string(), // Example PCI address, change as needed
         args: vec![
             "udp-echo".to_string(),
             "-l".to_string(), "0-3".to_string(),

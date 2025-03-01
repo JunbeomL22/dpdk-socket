@@ -7,7 +7,7 @@ fn main() {
     // For a real implementation, you would need to properly generate bindings to DPDK
     
     // Check if we need to link against real DPDK libraries
-    let link_real_dpdk = false;
+    let link_real_dpdk = true;
     
     if link_real_dpdk {
         // Link to DPDK libraries 
@@ -117,9 +117,154 @@ fn main() {
         // Add other necessary fields here
         _padding: [u8; 1024], // Add padding to avoid size issues
     }
-    
+
+    #[repr(C)]
+    pub struct rte_pci_addr {
+        pub domain: u16,
+        pub bus: u8,
+        pub devid: u8,
+        pub function: u8,
+    }
+
+    // DPDK device information structure
+    #[repr(C)]
+    pub struct rte_eth_dev_info {
+        pub device: *mut std::ffi::c_void,         // Generic device pointer
+        pub pci_dev: *mut rte_pci_device,          // PCI device information
+        pub driver_name: *const c_char,            // Driver name
+        pub min_rx_bufsize: u32,                   // Minimum RX buffer size
+        pub max_rx_pktlen: u32,                    // Maximum RX packet length
+        pub max_rx_queues: u16,                    // Maximum number of RX queues
+        pub max_tx_queues: u16,                    // Maximum number of TX queues
+        pub max_mac_addrs: u32,                    // Maximum number of MAC addresses
+        pub max_hash_mac_addrs: u32,               // Maximum number of hash MAC addresses
+        pub max_vfs: u16,                          // Maximum number of VFs
+        pub max_vmdq_pools: u16,                   // Maximum number of VMDq pools
+        pub rx_offload_capa: u64,                  // Device RX offload capabilities
+        pub tx_offload_capa: u64,                  // Device TX offload capabilities
+        pub rx_queue_offload_capa: u64,            // Queue RX offload capabilities
+        pub tx_queue_offload_capa: u64,            // Queue TX offload capabilities
+        pub reta_size: u16,                        // Redirection table size
+        pub hash_key_size: u8,                     // Hash key size in bytes
+        pub flow_type_rss_offloads: u64,           // Flow types supported by RSS
+        pub default_rxconf: rte_eth_rxconf,        // Default RX configuration
+        pub default_txconf: rte_eth_txconf,        // Default TX configuration
+        pub vmdq_queue_base: u16,                  // First queue ID for VMDq pools
+        pub vmdq_queue_num: u16,                   // Queue number for VMDq pools
+        pub vmdq_pool_base: u16,                   // VMDq pool base ID
+        pub switch_info: rte_eth_switch_info,      // Switch information
+        pub dev_capa: u64,                         // Device capabilities
+        pub reserved_64s: [u64; 4],                // Reserved
+        pub reserved_ptrs: [*mut std::ffi::c_void; 4], // Reserved
+    }
+
+    // PCI device structure
+    #[repr(C)]
+    pub struct rte_pci_device {
+        pub addr: rte_pci_addr,                    // PCI address
+        pub id: rte_pci_id,                        // PCI ID
+        pub mem_resource: [rte_pci_resource; 6],   // PCI memory resources
+        pub driver: *mut std::ffi::c_void,         // Associated driver
+        pub max_vfs: u16,                          // Maximum number of VFs
+        pub numa_node: i16,                        // NUMA node connection
+        pub kdrv: rte_kernel_driver,               // Kernel driver type
+        pub intr_handle: rte_intr_handle,          // Interrupt handle
+    }
+
+    // PCI ID structure
+    #[repr(C)]
+    pub struct rte_pci_id {
+        pub vendor_id: u16,                        // Vendor ID
+        pub device_id: u16,                        // Device ID
+        pub subsystem_vendor_id: u16,              // Subsystem vendor ID
+        pub subsystem_device_id: u16,              // Subsystem device ID
+    }
+
+    // PCI memory resource
+    #[repr(C)]
+    pub struct rte_pci_resource {
+        pub phys_addr: u64,                        // Physical address
+        pub len: u64,                              // Length
+        pub addr: *mut std::ffi::c_void,           // Virtual address
+    }
+
+    // Kernel driver type
+    #[repr(C)]
+    pub enum rte_kernel_driver {
+        RTE_KDRV_UNKNOWN = 0,                      // Unknown
+        RTE_KDRV_IGB_UIO = 1,                      // IGB UIO driver
+        RTE_KDRV_VFIO = 2,                         // VFIO driver
+        RTE_KDRV_UIO_GENERIC = 3,                  // UIO generic driver
+        RTE_KDRV_NIC_UIO = 4,                      // NIC UIO driver
+        RTE_KDRV_VFIO_NOIOMMU = 5,                 // VFIO no-IOMMU driver
+    }
+
+    // Interrupt handle structure
+    #[repr(C)]
+    pub struct rte_intr_handle {
+        pub vfio_dev_fd: c_int,                    // VFIO device file descriptor
+        pub fd: c_int,                             // File descriptor
+        pub type_: rte_intr_handle_type,           // Interrupt type
+        pub max_intr: u32,                         // Maximum number of interrupts
+        pub nb_efd: u32,                           // Number of event fds
+        pub efds: [c_int; 32],                     // Event file descriptors
+        pub nb_intr: u32,                          // Number of interrupts
+    }
+
+    // Interrupt type
+    #[repr(C)]
+    pub enum rte_intr_handle_type {
+        RTE_INTR_HANDLE_UNKNOWN = 0,               // Unknown 
+        RTE_INTR_HANDLE_UIO,                       // UIO interrupt
+        RTE_INTR_HANDLE_UIO_INTX,                  // UIO INTx interrupt
+        RTE_INTR_HANDLE_VFIO_LEGACY,               // VFIO legacy interrupt
+        RTE_INTR_HANDLE_VFIO_MSI,                  // VFIO MSI interrupt
+        RTE_INTR_HANDLE_VFIO_MSIX,                 // VFIO MSI-X interrupt
+        RTE_INTR_HANDLE_ALARM,                     // Alarm interrupt
+        RTE_INTR_HANDLE_EXT,                       // External interrupt
+        RTE_INTR_HANDLE_VDEV,                      // Virtual device
+    }
+
+    // RX queue configuration structure
+    #[repr(C)]
+    pub struct rte_eth_rxconf {
+        pub rx_thresh: rte_eth_thresh,             // RX ring threshold
+        pub rx_free_thresh: u16,                   // Drives the FreeBSD compat code
+        pub rx_drop_en: u8,                        // Drop packets if no descriptors
+        pub rx_deferred_start: u8,                 // Don't start queue with rte_eth_dev_start()
+        pub rx_offloads: u64,                      // Per-queue RX offloads
+    }
+
+    // TX queue configuration structure
+    #[repr(C)]
+    pub struct rte_eth_txconf {
+        pub tx_thresh: rte_eth_thresh,             // TX ring threshold
+        pub tx_rs_thresh: u16,                     // Report status threshold
+        pub tx_free_thresh: u16,                   // Free threshold
+        pub tx_deferred_start: u8,                 // Don't start queue with rte_eth_dev_start()
+        pub tx_offloads: u64,                      // Per-queue TX offloads
+    }
+
+    // Ring threshold
+    #[repr(C)]
+    pub struct rte_eth_thresh {
+        pub pthresh: u8,                           // Prefetch threshold
+        pub hthresh: u8,                           // Host threshold
+        pub wthresh: u8,                           // Write-back threshold
+    }
+
+    // Switch information structure
+    #[repr(C)]
+    pub struct rte_eth_switch_info {
+        pub domain_id: u16,                        // Switch domain ID
+        pub port_id: u16,                          // Switch port ID
+        pub name: [c_char; 64],                    // Switch name
+    }
     // DPDK Function Declarations
     extern "C" {
+        pub fn rte_eth_dev_info_get(port_id: u16, dev_info: *mut rte_eth_dev_info) -> c_int;
+        pub fn rte_pci_addr_parse(addr: *const c_char, dev: *mut rte_pci_addr) -> c_int;
+        pub fn rte_eal_hotplug_add(bus_name: *const c_char, dev_name: u16, dev_id: u8, vendor: u8, device: u8, dev_args: *const c_char) -> c_int;
         pub fn rte_eal_init(argc: c_int, argv: *mut *mut c_char) -> c_int;
         pub fn rte_eal_cleanup() -> c_int;
         pub fn rte_eth_dev_socket_id(port_id: u16) -> c_int;

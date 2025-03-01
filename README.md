@@ -2,12 +2,20 @@
 
 A high-level async UDP/TCP socket library for Rust using DPDK (Data Plane Development Kit).
 
+The library has been organized into modules to make the codebase more maintainable:
+- `common`: Core DPDK functionality and shared socket implementation
+- `tcp`: TCP-specific socket implementation with AsyncRead/AsyncWrite traits
+- `udp`: UDP-specific socket implementation with a simpler interface
+
 ## Features
 
 - Async API built on Tokio
-- UDP and TCP socket support
+- UDP and TCP socket support with AsyncRead/AsyncWrite traits
 - Raw packet handling through DPDK
 - High-performance networking
+- Automatic connection recovery
+- Custom TCP connection parameters
+- IP address binding support
 
 ## Prerequisites
 
@@ -96,7 +104,62 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-## Configuration
+## Advanced Usage
+
+### Custom TCP Connection Options
+
+You can customize TCP connection parameters:
+
+```rust
+use dpdk_socket::{DpdkTcpStream, TcpParams};
+
+// Define custom TCP parameters
+let tcp_params = TcpParams {
+    max_retries: 5,               // Connection attempt retries
+    connect_timeout_ms: 2000,     // Connection timeout in milliseconds
+    keepalive_interval_ms: 10000, // Keepalive interval
+    keepalive_timeout_ms: 2000,   // Keepalive timeout
+    ..Default::default()
+};
+
+// Connect with custom parameters
+let stream = DpdkTcpStream::connect_with_params(server_addr, tcp_params).await?;
+```
+
+### Source IP Address Binding
+
+You can bind to a specific local IP address:
+
+```rust
+use dpdk_socket::DpdkTcpStream;
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+
+// Define source and destination addresses
+let server_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 2)), 8080);
+let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1)), 0); // 0 = random port
+
+// Connect from a specific local address
+let stream = DpdkTcpStream::connect_from(server_addr, local_addr).await?;
+```
+
+### Automatic Reconnection
+
+The library will automatically try to reconnect if the connection is lost:
+
+```rust
+// Write will automatically reconnect if connection was lost
+stream.write_all(data).await?;
+
+// You can also explicitly reconnect
+if stream.state() != TcpState::Established {
+    stream.reconnect().await?;
+}
+
+// Or ensure the connection is established before sending
+stream.ensure_connected().await?;
+```
+
+## DPDK Configuration
 
 You can customize DPDK initialization:
 
@@ -105,6 +168,8 @@ let options = DpdkOptions {
     port_id: 0,
     num_rx_queues: 2,
     num_tx_queues: 2,
+    bind_pci_device: true,            // Bind to a specific PCI device
+    pci_addr: "0000:03:00.0".into(),  // PCI address of the network device
     args: vec![
         "your-app-name".to_string(),
         "-l".to_string(), "0-3".to_string(),
