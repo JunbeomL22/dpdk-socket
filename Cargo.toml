@@ -1,0 +1,20 @@
+[package]
+name = "dpdk-socket"
+version = "0.1.0"
+edition = "2021"
+description = "High-level async UDP/TCP socket library using DPDK"
+repository = "https://github.com/junbeom/dpdk-socket"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+tokio = { version = "1.28", features = ["full"] }
+libc = "0.2"
+once_cell = "1.18"
+bytes = "1.4"
+thiserror = "2.0"
+futures = "0.3"
+tracing = "0.1"
+
+[build-dependencies]
+bindgen = "0.71"
+pkg-config = "0.3"
